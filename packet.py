@@ -1,21 +1,16 @@
+import pickle
 
 class Packet():
     def __init__(self):
-        # Note, the packet should not navigate by the
-        # reachability matrix stored in its data
-        # it should navigate using the reachability matrix
-        # of whatever node it's currently at
         self.source = None
-        self.destination = None
-        self.next_hop = None
-        self.source_data = None
+        self.data = None
 
     def to_bits(self):
-        pass # TODO
+        return pickle.dumps({"source" : self.source,
+                             "data" : self.data})
     def from_bits(self, bits):
-        pass # TODO
-    def get_destination(self):  return self.destination
+        data = pickle.loads(bits)
+        self.source = data["source"]
+        self.data = data["data"]
     def get_source(self):       return self.source
-    def get_next_hop(self):     return self.next_hop
-    def unpack_data(self):      return self.source_data
-    def set_next_hop(self, n):  self.next_hop = n
+    def get_data(self):      return self.data

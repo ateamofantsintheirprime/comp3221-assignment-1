@@ -1,4 +1,5 @@
 from node import Node
+from packet import Packet
 import threading, time, socket
 ip = 'localhost'
 
@@ -24,6 +25,8 @@ ip = 'localhost'
 
 ## also we cannot assume that every node in the config will exist / be responding
 ## to us because we cannot open all terminal windows simultaneously
+
+# okay so there are no in transit packages
 
 class NodeNetworkInterface():
     def __init__(self, id, listening_port, config_file):
@@ -82,7 +85,7 @@ class NodeNetworkInterface():
             data, addr = listening_socket.recvfrom(1024)
             packet = Packet()
             packet.from_bits(data)
-            self.node.receive_packet(packet)
+            self.node.read_packet(packet)
 
     def broadcast(self):
         sending_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -105,11 +108,12 @@ class NodeNetworkInterface():
                 # when the packet send time is still several seconds away
 
     def send_packets(self, sending_socket):
-        for p in self.node.get_outgoing_packets():
-            hop_id = packet.get_next_hop()
-            assert hop_id in self.sending_ports.keys()
-            hop_port = self.sending_ports[hop_id]
-            sending_socket.sendto(packet.to_bits(), (ip, hop_port))
+        for n_id in self.node.get_neighbour_ids():
+            destination_port = self.sending_ports[n_id]
+            packet = Packet()
+            packet.data = self.node.get_reachability_matrix()
+            packet.source = self.node.id
+            sending_socket.sendto(packet.to_bits(), (ip, destination_port))
 
     def routing_calculations(self):
         time.sleep(60)
