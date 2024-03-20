@@ -35,38 +35,39 @@ class Node():
         return self.neighbour_costs.keys()
 
     def calculate_shortest_paths(self):
-        distances = {}
-        paths = {}
-        for neighbour in self.reachability_matrix.keys():
-            distances[neighbour] = 99999999
-            paths[neighbour] = [99999999]
-        shortest_paths[self.id] = [0, [self.id]]
+        # distances = {}
+        # paths = {}
+        # for neighbour in self.reachability_matrix.keys():
+        #     distances[neighbour] = 99999999
+        #     paths[neighbour] = []
 
-        # Dijkstra's algorithm
+        # shortest_paths[self.id] = [0, [self.id]]
+
+        # # Dijkstra's algorithm
         
 
 
 
-        for neighbour in self.neighbour_costs.keys():
-            shortest_paths[neighbour] = [self.neighbour_costs[neighbour], [self.id, neighbour]]
+        # for neighbour in self.neighbour_costs.keys():
+        #     shortest_paths[neighbour] = [self.neighbour_costs[neighbour], [self.id, neighbour]]
         
-        while len(shortest_paths.keys()) < len(self.reachability_matrix):
-            for node1 in shortest_paths.keys():
-                if node1 == shortest_paths[node1][1][-1]:
-                    continue
-                sub_path = shortest_paths[node1]
-                for node_n in self.reachability_matrix[node1]:
-                    total_cost = sub_path[0] + self.reachability_matrix[node_n][node1]
-                    total_path = sub_path[1]
-                    total_path.append(node_n)
-                    if not node_n in shortest_paths.keys():
-                        shortest_paths[node_n] = [total_cost, total_path]
-                    else:
-                        if total_cost < shortest_paths[node_n][0]:
-                            shortest_paths[node_n] = [total_cost, total_path]
-        print("LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME ")
-        print("shortest paths:", shortest_paths)
-        return shortest_paths
+        # while len(shortest_paths.keys()) < len(self.reachability_matrix):
+        #     for node1 in shortest_paths.keys():
+        #         if node1 == shortest_paths[node1][1][-1]:
+        #             continue
+        #         sub_path = shortest_paths[node1]
+        #         for node_n in self.reachability_matrix[node1]:
+        #             total_cost = sub_path[0] + self.reachability_matrix[node_n][node1]
+        #             total_path = sub_path[1]
+        #             total_path.append(node_n)
+        #             if not node_n in shortest_paths.keys():
+        #                 shortest_paths[node_n] = [total_cost, total_path]
+        #             else:
+        #                 if total_cost < shortest_paths[node_n][0]:
+        #                     shortest_paths[node_n] = [total_cost, total_path]
+        # print("LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME ")
+        # print("shortest paths:", shortest_paths)
+        # return shortest_paths
         pass
 
     def get_reachability_matrix(self):
