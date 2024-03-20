@@ -40,6 +40,7 @@ class NodeNetworkInterface():
         # self.id = id
         self.listening_port = listening_port
         self.sending_ports = {}
+        self.packet_count = 0
         self.node = Node(id)
 
         # dont forget to make it periodically re-check the config file to
@@ -81,10 +82,11 @@ class NodeNetworkInterface():
 
     def listening_loop(self, listening_socket):
         while True:
-            print("listening...")
             data, addr = listening_socket.recvfrom(1024)
             packet = Packet()
             packet.from_bits(data)
+            t = time.strftime("%H:%M:%S.%f")
+            print("received packet: ", packet.id, " at time: ", t)
             self.node.read_packet(packet)
 
     def broadcast(self):
@@ -97,7 +99,7 @@ class NodeNetworkInterface():
             current_time = time.time()
             if current_time >= packet_send_time:
                 packet_send_time = current_time + 10
-                print("sending...")
+                print("broadcasting...")
                 self.send_packets(sending_socket)
 
             elif current_time + 9 <= packet_send_time:
@@ -113,7 +115,12 @@ class NodeNetworkInterface():
             packet = Packet()
             packet.data = self.node.get_reachability_matrix()
             packet.source = self.node.id
+            packet.id = self.packet_count
+
+            t = time.strftime("%H:%M:%S.%f")
+            print("sending: ", packet.id, " time: ",t )
             sending_socket.sendto(packet.to_bits(), (ip, destination_port))
+            self.packet_count += 1
 
     def routing_calculations(self):
         time.sleep(60)
