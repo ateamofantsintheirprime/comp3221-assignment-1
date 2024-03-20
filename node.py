@@ -6,20 +6,7 @@ class Node():
             # we assume that all nodes start up successfully
         self.id = id
         self.neighbour_costs = {}
-        # store the neighbour cost and store if that neighbour is "up"
-
-        # The reachability matrix should have each node in the network
-        # as its keys, and the values should be the total cost to reach
-        # that node, as well as the path. PROBABLY NOT THIS
-        # Maybe each node should store the neighbour costs of every
-        # other node, so each node needs only to broadcast the link cost
-        # of it's neighbour nodes.
         self.reachability_matrix = {self.id : {}}
-        # this may not be allowed, as the node should not have global knowledge
-        self.recalculate_routing_trigger = True
-        # and the shortest path dictionary actually is the result of the
-        # shortest path algorithm
-        self.shortest_paths = {}
         pass
 
     def set_neighbour_costs(self, key, cost):
@@ -31,47 +18,34 @@ class Node():
             else:
                 self.reachability_matrix[neighbour] = {self.id : self.neighbour_costs[neighbour]}
 
-    def get_neighbour_ids(self):
-        return self.neighbour_costs.keys()
-
     def calculate_shortest_paths(self):
-        # distances = {}
-        # paths = {}
-        # for neighbour in self.reachability_matrix.keys():
-        #     distances[neighbour] = 99999999
-        #     paths[neighbour] = []
+        # Dijkstra's algorithm
+        dist = {}
+        path = {}
+        q = []
+        for v in self.reachability_matrix.keys():
+            dist[v] = 99999999
+            path[v] = []
+            q.append(v)
 
-        # shortest_paths[self.id] = [0, [self.id]]
+        dist[self.id] = 0
+        path[self.id] = [self.id]
 
-        # # Dijkstra's algorithm
-        
+        while len(q) > 0:
+            u = min(q, key=lambda x: dist[x])
+            q.remove(u)
 
+            for v in self.reachability_matrix[u]:
+                alt = dist[u] + self.reachability_matrix[u][v]
+                if alt < dist[v]:
+                    dist[v] = alt
+                    path[v] = path[u] + [v]
 
-
-        # for neighbour in self.neighbour_costs.keys():
-        #     shortest_paths[neighbour] = [self.neighbour_costs[neighbour], [self.id, neighbour]]
-        
-        # while len(shortest_paths.keys()) < len(self.reachability_matrix):
-        #     for node1 in shortest_paths.keys():
-        #         if node1 == shortest_paths[node1][1][-1]:
-        #             continue
-        #         sub_path = shortest_paths[node1]
-        #         for node_n in self.reachability_matrix[node1]:
-        #             total_cost = sub_path[0] + self.reachability_matrix[node_n][node1]
-        #             total_path = sub_path[1]
-        #             total_path.append(node_n)
-        #             if not node_n in shortest_paths.keys():
-        #                 shortest_paths[node_n] = [total_cost, total_path]
-        #             else:
-        #                 if total_cost < shortest_paths[node_n][0]:
-        #                     shortest_paths[node_n] = [total_cost, total_path]
-        # print("LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME ")
-        # print("shortest paths:", shortest_paths)
-        # return shortest_paths
-        pass
-
-    def get_reachability_matrix(self):
-        return self.reachability_matrix
+        print("This is node ", self.id)
+        for node in dist.keys():
+            if node != self.id:
+                print("Least cost path from ", self.id, " to ", node, ": ", end = "")
+                print("".join(path[node]), ", link cost: ", dist[node])
 
     def update_reachability_matrix(self, new_matrix):
         # Receive the matrix update from neighbour.
@@ -88,8 +62,6 @@ class Node():
         print("reachability matrix:", self.reachability_matrix)
         print("neighbour costs:", self.neighbour_costs)
 
-
     def read_packet(self, packet):
-        s = packet.get_source()
         d = packet.get_data()
         self.update_reachability_matrix(d)

@@ -3,48 +3,30 @@ from packet import Packet
 import threading, time, socket
 ip = 'localhost'
 
-## TODO!! MAKE IT SO THAT THE LISTENING THREAD STORES RECEIVED PACKETS IN A QUEUE
-## AND ONLY INTERACTS WITH THE NODE OBJECT ONCE THE SENDING THREAD HAS UNLOCKED IT
-## SO WE DONT GET RACE CONDITIONS ALSO MAKE SURE TO CHECK HOW LONG THIS QUEUE IS
-## GETTING INCASE CERTAIN NODES ARE GETTING OVERLOADED
-
-## ADD THREAD LOCKING!!!!!!!!
-## TRY NOT TO LOCK THE WHOLE NODE IF POSSIBLE, JUST ADD LOCKS TO THE
-## VARIABLES THAT ARE GONNA BE ACCESSED BY / INFLUENCE MULTIPLE THREADS
-
-## also figure out how to gracefully close the program
-
-
-## also note that at the start, each node only knows its neighbours
-## so it will need to be adding new nodes to its reachability matrix
-## based on the reachability matrices stored in the packets it receives
-
-## rename rechability matrix to link cost matrix
-## the shortest path list is where the total path cost and shit is found
-
-
-## also we cannot assume that every node in the config will exist / be responding
-## to us because we cannot open all terminal windows simultaneously
-
-# okay so there are no in transit packages
+CORRECT_NODE_PORTS = {
+    'A' : 6000,
+    'B' : 6001,
+    'C' : 6002,
+    'D' : 6003,
+    'E' : 6004,
+    'F' : 6005,
+    'G' : 6006,
+    'H' : 6007,
+    'I' : 6008,
+    'J' : 6009
+}
 
 class NodeNetworkInterface():
     def __init__(self, id, listening_port, config_file):
-        # The listening thread should read the destination of
-        # each packet it receives, if that destination is this node
-        # it should read the packet and process the data
-        # if the destination is another node, it should send it to
-        # the first node in the shortest path to reach that destiation
-        # from this node
+        assert listening_port == CORRECT_NODE_PORTS[id]
         self.config_file = config_file
-        # self.id = id
         self.listening_port = listening_port
         self.sending_ports = {}
         self.packet_count = 0
         self.node = Node(id)
+        self.sending_lock = threading.Lock()
+        self.listening_lock = threading.Lock()
 
-        # dont forget to make it periodically re-check the config file to
-        # detect changes made through cli
         self.load_from_config()
         self.start_threads()
 
@@ -65,14 +47,17 @@ class NodeNetworkInterface():
         listening_thread = threading.Thread(target=self.listen)
         sending_thread = threading.Thread(target=self.broadcast)
         routing_calculations_thread = threading.Thread(target=self.routing_calculations)
+        cli_listening_thread = threading.Thread(target=self.cli_listen)
 
         listening_thread.start()
         sending_thread.start()
         routing_calculations_thread.start()
+        cli_listening_thread.start()
 
         listening_thread.join()
         sending_thread.join()
         routing_calculations_thread.join()
+        cli_listening_thread.join()
 
 
     def listen(self):
@@ -82,10 +67,12 @@ class NodeNetworkInterface():
 
     def listening_loop(self, listening_socket):
         while True:
+            self.listening_lock.acquire() # Block until the lock is free
+            self.listening_lock.release()
             data, addr = listening_socket.recvfrom(1024)
             packet = Packet()
             packet.from_bits(data)
-            t = time.strftime("%H:%M:%S.%f")
+            t = time.strftime("%H:%M:%S")
             print("received packet: ", packet.id, " at time: ", t)
             self.node.read_packet(packet)
 
@@ -96,6 +83,8 @@ class NodeNetworkInterface():
     def sending_loop(self, sending_socket):
         packet_send_time = time.time() + 10
         while True:
+            self.sending_lock.acquire() # Block until the lock is free
+            self.sending_lock.release()
             current_time = time.time()
             if current_time >= packet_send_time:
                 packet_send_time = current_time + 10
@@ -117,8 +106,8 @@ class NodeNetworkInterface():
             packet.source = self.node.id
             packet.id = self.packet_count
 
-            t = time.strftime("%H:%M:%S.%f")
-            print("sending: ", packet.id, " time: ",t )
+            t = time.strftime("%H:%M:%S")
+            print("sending: ", packet.id, " to port :",destination_port, " time: ",t )
             sending_socket.sendto(packet.to_bits(), (ip, destination_port))
             self.packet_count += 1
 
@@ -128,7 +117,41 @@ class NodeNetworkInterface():
 
     def routing_calculations_loop(self):
         while True: # gotta be a better way to do this than while true
-            if self.node.recalculate_routing_trigger:
-                self.node.recalculate_routing_trigger = False
-                self.node.calculate_shortest_paths()
-            time.sleep(0.1) # dont want this shit to spam too hard
+            self.node.calculate_shortest_paths()
+            time.sleep(10)
+
+    def cli_listen(self):
+        cli_port = self.listening_port + 100
+        cli_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        cli_socket.bind((ip, cli_port))
+        self.cli_listen_loop(cli_socket)
+    
+    def cli_listen_loop(self, cli_socket):
+        while True:
+            data, addr = cli_socket.recvfrom(1024)
+            command = data.decode()
+            command = command.split()
+            
+            if command[0] == "FAIL":
+                self.down = True
+                self.sending_lock.acquire()
+                self.listening_lock.acquire()
+                print("Node deactivated by command line interface")
+
+            elif command[0] == "RECOVER":
+                self.down = False
+                self.sending_lock.release()
+                self.listening_lock.release()
+                print("Node revived by command line interface")
+            else:
+                node_id = command[0]
+                node_cost = int(command[1])
+                node_port = command[2]
+                if node_id in self.node.neighbours.keys():
+                    if node_port in self.sending_ports.keys():
+                        self.node.neighbour_costs[node_id] = node_cost
+                        print("Successfully adjusted link cost to ", node_id, ". New cost: ", node_cost)
+                    else:
+                        print("Error: link cost adjustment command used incorrect port (", node_port,") for neighbour ", node_id)
+                else:
+                    print("Error: tried to adjust link cost with neighbour ", node_port, "but no such neighbour exists.")
