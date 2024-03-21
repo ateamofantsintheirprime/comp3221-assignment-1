@@ -6,11 +6,13 @@ class Node():
             # we assume that all nodes start up successfully
         self.id = id
         self.neighbour_costs = {}
+        self.neighbours_up = {}
         self.reachability_matrix = {self.id : {}}
         pass
 
     def set_neighbour_costs(self, key, cost):
         self.neighbour_costs[key] = cost
+        self.neighbours_up[key] = True
         self.reachability_matrix = {self.id : self.neighbour_costs}
         for neighbour in self.neighbour_costs.keys():
             if neighbour in self.reachability_matrix.keys():
@@ -47,20 +49,30 @@ class Node():
                 print("Least cost path from ", self.id, " to ", node, ": ", end = "")
                 print("".join(path[node]), ", link cost: ", dist[node])
 
-    def update_reachability_matrix(self, new_matrix):
+    def get_active_neighbour_costs(self):
+        # get the dictionary of neighbour costs, but only those neighbours that are up
+        active_neighbour_costs = {}
+        for neighbour in self.neighbour_costs.keys():
+            if self.neighbours_up[neighbour]:
+                active_neighbour_costs[neighbour] = self.neighbour_costs[neighbour]
+        return active_neighbour_costs
+
+    def update_reachability_matrix(self, new_matrix = None):
         # Receive the matrix update from neighbour.
         # We want to incorperate this info into our own matrix.
         # However we want to ignore what they say about our own neighbour link costs
-
+        if new_matrix == None:
+            new_matrix = self.reachability_matrix
         self.reachability_matrix = new_matrix  # Incorperate what they say
-        self.reachability_matrix[self.id] = self.neighbour_costs # Overwrite what they say about us
-        for neighbour in self.neighbour_costs.keys():
+        active_neighbour_costs = self.get_active_neighbour_costs()
+        self.reachability_matrix[self.id] = active_neighbour_costs # Overwrite what they say about us
+        for neighbour in active_neighbour_costs.keys():
             if neighbour in self.reachability_matrix.keys():
-                self.reachability_matrix[neighbour][self.id] = self.neighbour_costs[neighbour]
+                self.reachability_matrix[neighbour][self.id] = active_neighbour_costs[neighbour]
             else:
-                self.reachability_matrix[neighbour] = {self.id : self.neighbour_costs[neighbour]}
+                self.reachability_matrix[neighbour] = {self.id : active_neighbour_costs[neighbour]}
         print("reachability matrix:", self.reachability_matrix)
-        print("neighbour costs:", self.neighbour_costs)
+        print("neighbour costs:", active_neighbour_costs)
 
     def read_packet(self, packet):
         d = packet.get_data()

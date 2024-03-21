@@ -23,7 +23,9 @@ class NodeNetworkInterface():
         self.listening_port = listening_port
         self.sending_ports = {}
         self.packet_count = 0
+        self.timeouts = {}
         self.node = Node(id)
+
         self.sending_lock = threading.Lock()
         self.listening_lock = threading.Lock()
 
@@ -41,6 +43,7 @@ class NodeNetworkInterface():
             # may add a line into the config to
             # specify if the node is up or down
             self.sending_ports[n_id] = n_port
+            self.timeouts[n_id] = time.time()
             self.node.set_neighbour_costs(n_id, n_cost)
 
     def start_threads(self):
@@ -73,6 +76,7 @@ class NodeNetworkInterface():
             packet = Packet()
             packet.from_bits(data)
             t = time.strftime("%H:%M:%S")
+            self.timeouts[packet.source] = time.time()
             print("received packet: ", packet.id, " at time: ", t)
             self.node.read_packet(packet)
 
@@ -81,28 +85,31 @@ class NodeNetworkInterface():
         self.sending_loop(sending_socket)
 
     def sending_loop(self, sending_socket):
-        packet_send_time = time.time() + 10
+        # packet_send_time = time.time() + 10
         while True:
             self.sending_lock.acquire() # Block until the lock is free
             self.sending_lock.release()
-            current_time = time.time()
-            if current_time >= packet_send_time:
-                packet_send_time = current_time + 10
-                print("broadcasting...")
-                self.send_packets(sending_socket)
+            print("broadcasting...")
+            self.send_packets(sending_socket)
+            time.sleep(10)
+            # current_time = time.time()
+            # if current_time >= packet_send_time:
+            #     packet_send_time = current_time + 10
+            #     print("broadcasting...")
+            #     self.send_packets(sending_socket)
 
-            elif current_time + 9 <= packet_send_time:
-                time.sleep(8)
-                # i dont trust that sleep(8) wont have some imprecision
+            # elif current_time + 9 <= packet_send_time:
+            #     time.sleep(8)
+            #     # i dont trust that sleep(8) wont have some imprecision
                 # that compounds as the program runs over time
                 # this makes it so the loop isnt spamming so hard
                 # when the packet send time is still several seconds away
 
     def send_packets(self, sending_socket):
-        for n_id in self.node.get_neighbour_ids():
+        for n_id in self.node.neighbour_costs.keys():
             destination_port = self.sending_ports[n_id]
             packet = Packet()
-            packet.data = self.node.get_reachability_matrix()
+            packet.data = self.node.reachability_matrix
             packet.source = self.node.id
             packet.id = self.packet_count
 
@@ -116,9 +123,26 @@ class NodeNetworkInterface():
         self.routing_calculations_loop()
 
     def routing_calculations_loop(self):
+        reachability_matrix = self.node.reachability_matrix
         while True: # gotta be a better way to do this than while true
-            self.node.calculate_shortest_paths()
+            # check if any of our neighbours have taken a suspiciously long amount of time to send us a packet
+            suspiciously_long_time = 15 # 15 seconds
+            for neighbour in self.timeouts.keys():
+                print("time: ", time.time())
+                print("timeouts: ", self.timeouts)
+                if time.time() - self.timeouts[neighbour] > suspiciously_long_time:
+                    print("node: ", neighbour, "has been detected as failed!")
+                    self.node.neighbours_up[neighbour] = False
+                else:
+                    if not self.node.neighbours_up[neighbour]:
+                        print("node", neighbour, "has been detected as recovered")
+                    self.node.neighbours_up[neighbour] = True
+            self.node.update_reachability_matrix()
+            # if reachability_matrix != self.node.reachability_matrix: # only recalculate it if it's changed
+            self.node.calculate_shortest_paths() 
             time.sleep(10)
+            reachability_matrix = self.node.reachability_matrix
+
 
     def cli_listen(self):
         cli_port = self.listening_port + 100
