@@ -89,21 +89,9 @@ class NodeNetworkInterface():
         while True:
             self.sending_lock.acquire() # Block until the lock is free
             self.sending_lock.release()
-            print("broadcasting...")
+            print("broadcasting packets to neighbours.")
             self.send_packets(sending_socket)
             time.sleep(10)
-            # current_time = time.time()
-            # if current_time >= packet_send_time:
-            #     packet_send_time = current_time + 10
-            #     print("broadcasting...")
-            #     self.send_packets(sending_socket)
-
-            # elif current_time + 9 <= packet_send_time:
-            #     time.sleep(8)
-            #     # i dont trust that sleep(8) wont have some imprecision
-                # that compounds as the program runs over time
-                # this makes it so the loop isnt spamming so hard
-                # when the packet send time is still several seconds away
 
     def send_packets(self, sending_socket):
         for n_id in self.node.neighbour_costs.keys():
@@ -114,7 +102,7 @@ class NodeNetworkInterface():
             packet.id = self.packet_count
 
             t = time.strftime("%H:%M:%S")
-            print("sending: ", packet.id, " to port :",destination_port, " time: ",t )
+            # print("sending: ", packet.id, " to port :",destination_port, " time: ",t )
             sending_socket.sendto(packet.to_bits(), (ip, destination_port))
             self.packet_count += 1
 
@@ -128,20 +116,20 @@ class NodeNetworkInterface():
             # check if any of our neighbours have taken a suspiciously long amount of time to send us a packet
             suspiciously_long_time = 15 # 15 seconds
             for neighbour in self.timeouts.keys():
-                print("time: ", time.time())
-                print("timeouts: ", self.timeouts)
+                # print("time: ", time.time())
+                # print("timeouts: ", self.timeouts)
                 if time.time() - self.timeouts[neighbour] > suspiciously_long_time:
-                    print("node: ", neighbour, "has been detected as failed!")
+                    print(f"node: {neighbour} has been detected as failed! ( Hasnt responded for {time.time() - self.timeouts[neighbour] } seconds!)")
                     self.node.neighbours_up[neighbour] = False
                 else:
                     if not self.node.neighbours_up[neighbour]:
-                        print("node", neighbour, "has been detected as recovered")
+                        print(f"node {neighbour} has been detected as recovered")
                     self.node.neighbours_up[neighbour] = True
             self.node.update_reachability_matrix()
-            # if reachability_matrix != self.node.reachability_matrix: # only recalculate it if it's changed
-            self.node.calculate_shortest_paths() 
-            time.sleep(10)
-            reachability_matrix = self.node.reachability_matrix
+            if reachability_matrix != self.node.reachability_matrix: # only recalculate it if it's changed
+                self.node.calculate_shortest_paths() 
+                time.sleep(10)
+                reachability_matrix = self.node.reachability_matrix
 
 
     def cli_listen(self):

@@ -22,11 +22,12 @@ class Node():
 
     def calculate_shortest_paths(self):
         # Dijkstra's algorithm
+        inf = 99999999
         dist = {}
         path = {}
         q = []
         for v in self.reachability_matrix.keys():
-            dist[v] = 99999999
+            dist[v] = inf
             path[v] = []
             q.append(v)
 
@@ -46,8 +47,11 @@ class Node():
         print("This is node ", self.id)
         for node in dist.keys():
             if node != self.id:
-                print("Least cost path from ", self.id, " to ", node, ": ", end = "")
-                print("".join(path[node]), ", link cost: ", dist[node])
+                if dist[node] == inf:
+                    print("There is no path from ", self.id, " to ", node, "!")
+                else:        
+                    print("Least cost path from ", self.id, " to ", node, ": ", end = "")
+                    print("".join(path[node]), ", link cost: ", dist[node])
 
     def get_active_neighbour_costs(self):
         # get the dictionary of neighbour costs, but only those neighbours that are up
@@ -71,8 +75,10 @@ class Node():
                 self.reachability_matrix[neighbour][self.id] = active_neighbour_costs[neighbour]
             else:
                 self.reachability_matrix[neighbour] = {self.id : active_neighbour_costs[neighbour]}
-        print("reachability matrix:", self.reachability_matrix)
-        print("neighbour costs:", active_neighbour_costs)
+        
+        print("reachability matrix:")
+        for k in self.reachability_matrix.keys():
+            print("\t ", k, ": ", self.reachability_matrix[k])
 
     def read_packet(self, packet):
         d = packet.get_data()
