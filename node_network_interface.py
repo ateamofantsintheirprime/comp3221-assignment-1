@@ -128,8 +128,8 @@ class NodeNetworkInterface():
             self.node.update_reachability_matrix()
             if reachability_matrix != self.node.reachability_matrix: # only recalculate it if it's changed
                 self.node.calculate_shortest_paths() 
-                time.sleep(10)
-                reachability_matrix = self.node.reachability_matrix
+            time.sleep(10)
+            reachability_matrix = self.node.reachability_matrix
 
 
     def cli_listen(self):
