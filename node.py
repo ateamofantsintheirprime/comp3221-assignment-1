@@ -66,7 +66,7 @@ class Node():
         # We want to incorperate this info into our own matrix.
         # However we want to ignore what they say about our own neighbour link costs
         if new_matrix == None:
-            new_matrix = self.reachability_matrix
+            new_matrix = {neighbour: {} for neighbour in self.neighbour_costs}
         self.reachability_matrix = new_matrix  # Incorperate what they say
         active_neighbour_costs = self.get_active_neighbour_costs()
         self.reachability_matrix[self.id] = active_neighbour_costs # Overwrite what they say about us

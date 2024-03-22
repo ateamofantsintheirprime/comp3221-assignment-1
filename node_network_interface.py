@@ -108,6 +108,7 @@ class NodeNetworkInterface():
 
     def routing_calculations(self):
         time.sleep(60)
+        self.node.calculate_shortest_paths() 
         self.routing_calculations_loop()
 
     def routing_calculations_loop(self):
