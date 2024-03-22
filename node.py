@@ -44,6 +44,8 @@ class Node():
                     dist[v] = alt
                     path[v] = path[u] + [v]
 
+        for key in dist.keys():
+            dist[key] = round(dist[key],1)
         print("This is node ", self.id)
         for node in dist.keys():
             if node != self.id:
@@ -65,9 +67,10 @@ class Node():
         # Receive the matrix update from neighbour.
         # We want to incorperate this info into our own matrix.
         # However we want to ignore what they say about our own neighbour link costs
-        if new_matrix == None:
-            new_matrix = {neighbour: {} for neighbour in self.neighbour_costs}
-        self.reachability_matrix = new_matrix  # Incorperate what they say
+        # if new_matrix == None:
+        #     new_matrix = {neighbour: {} for neighbour in self.neighbour_costs}
+        if new_matrix != None:
+            self.reachability_matrix = new_matrix  # Incorperate what they say
         active_neighbour_costs = self.get_active_neighbour_costs()
         self.reachability_matrix[self.id] = active_neighbour_costs # Overwrite what they say about us
         for neighbour in active_neighbour_costs.keys():
@@ -75,7 +78,10 @@ class Node():
                 self.reachability_matrix[neighbour][self.id] = active_neighbour_costs[neighbour]
             else:
                 self.reachability_matrix[neighbour] = {self.id : active_neighbour_costs[neighbour]}
-        
+        for node in self.reachability_matrix.keys():
+            if not node in active_neighbour_costs.keys():
+                if self.id in self.reachability_matrix[node].keys():
+                    self.reachability_matrix[node].pop(self.id)
         print("reachability matrix:")
         for k in self.reachability_matrix.keys():
             print("\t ", k, ": ", self.reachability_matrix[k])

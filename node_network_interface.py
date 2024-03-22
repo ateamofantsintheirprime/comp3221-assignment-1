@@ -91,6 +91,20 @@ class NodeNetworkInterface():
             self.sending_lock.release()
             print("broadcasting packets to neighbours.")
             self.send_packets(sending_socket)
+                        # check if any of our neighbours have taken a suspiciously long amount of time to send us a packet
+            suspiciously_long_time = 15 # 15 seconds
+            for neighbour in self.timeouts.keys():
+                # print("time: ", time.time())
+                # print("timeouts: ", self.timeouts)
+                if time.time() - self.timeouts[neighbour] > suspiciously_long_time:
+                    print(f"node: {neighbour} has been detected as failed! ( Hasnt responded for {time.time() - self.timeouts[neighbour] } seconds!)")
+                    self.node.neighbours_up[neighbour] = False
+                else:
+                    # if not self.node.neighbours_up[neighbour]:
+                    print(f"node {neighbour} is responsive")
+                    self.node.neighbours_up[neighbour] = True
+            self.node.update_reachability_matrix()
+
             time.sleep(10)
 
     def send_packets(self, sending_socket):
@@ -114,21 +128,9 @@ class NodeNetworkInterface():
     def routing_calculations_loop(self):
         reachability_matrix = self.node.reachability_matrix
         while True: # gotta be a better way to do this than while true
-            # check if any of our neighbours have taken a suspiciously long amount of time to send us a packet
-            suspiciously_long_time = 15 # 15 seconds
-            for neighbour in self.timeouts.keys():
-                # print("time: ", time.time())
-                # print("timeouts: ", self.timeouts)
-                if time.time() - self.timeouts[neighbour] > suspiciously_long_time:
-                    print(f"node: {neighbour} has been detected as failed! ( Hasnt responded for {time.time() - self.timeouts[neighbour] } seconds!)")
-                    self.node.neighbours_up[neighbour] = False
-                else:
-                    if not self.node.neighbours_up[neighbour]:
-                        print(f"node {neighbour} has been detected as recovered")
-                    self.node.neighbours_up[neighbour] = True
             self.node.update_reachability_matrix()
-            if reachability_matrix != self.node.reachability_matrix: # only recalculate it if it's changed
-                self.node.calculate_shortest_paths() 
+            # if reachability_matrix != self.node.reachability_matrix: # only recalculate it if it's changed
+            self.node.calculate_shortest_paths() 
             time.sleep(10)
             reachability_matrix = self.node.reachability_matrix
 
